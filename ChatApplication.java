@@ -74,7 +74,7 @@ public class ChatApplication {
         }
     }
     
-    // Add this new method to handle message arrays
+    // new method to handle message arrays
     public void runArrayOperationsMenu() {
         if (currentUser == null) {
             System.out.println("You must be logged in to access message operations.");
@@ -208,7 +208,6 @@ public class ChatApplication {
         }
     }
     
-    // Update the main menu to include the new option
     public static void main(String[] args) {
         ChatApplication app = new ChatApplication();
         Scanner scanner = new Scanner(System.in);
