@@ -1,3 +1,4 @@
+// Update ChatApplication.java
 import javax.swing.JOptionPane;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -6,46 +7,120 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import org.json.JSONObject;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
+import java.util.stream.Collectors;
 
 public class ChatApplication {
-    private Map<String, Login> users;  // Map phone number to user
-    private Map<String, List<Message>> messages;  // Map phone number to list of messages
+    private Map<String, Login> users;
+    private Map<String, List<Message>> messages;
     private Login currentUser = null;
+    
+    // Arrays for storing different types of messages
+    private List<Message> sentMessages = new ArrayList<>();
+    private List<Message> disregardedMessages = new ArrayList<>();
+    private List<Message> storedMessages = new ArrayList<>();
+    private List<String> messageHashes = new ArrayList<>();
+    private List<String> messageIds = new ArrayList<>();
     
     public ChatApplication() {
         users = new HashMap<>();
         messages = new HashMap<>();
+        loadTestData(); // Load test data when application starts
     }
     
-    public void runMessageMenu() {
+    private void loadTestData() {
+        // Test Data Message 1
+        Message msg1 = new Message("Did you get the cake?", "+27834557896", "developer");
+        msg1.sentMessage(1);
+        storeMessageInArrays(msg1);
+        
+        // Test Data Message 2
+        Message msg2 = new Message("Where are you? You are late! I have asked you to be on time.", "+27838884567", "developer");
+        msg2.sentMessage(3); // Stored
+        storeMessageInArrays(msg2);
+        
+        // Test Data Message 3
+        Message msg3 = new Message("Yohoooo, I am at your gate.", "+27834484567", "developer");
+        msg3.sentMessage(2); // Disregarded
+        storeMessageInArrays(msg3);
+        
+        // Test Data Message 4
+        Message msg4 = new Message("It is dinner time !", "0838884567", "developer");
+        msg4.sentMessage(1); // Sent
+        storeMessageInArrays(msg4);
+        
+        // Test Data Message 5
+        Message msg5 = new Message("Ok, I am leaving without you.", "+27838884567", "developer");
+        msg5.sentMessage(3); // Stored
+        storeMessageInArrays(msg5);
+    }
+    
+    private void storeMessageInArrays(Message message) {
+        messageIds.add(message.getMessageId());
+        messageHashes.add(message.createMessageHash());
+        
+        if (message.isMessageSent()) {
+            sentMessages.add(message);
+        } else {
+            int choice = message.sentMessage(0).contains("delete") ? 2 : 3;
+            if (choice == 2) {
+                disregardedMessages.add(message);
+            } else if (choice == 3) {
+                storedMessages.add(message);
+            }
+        }
+    }
+    
+    // Add this new method to handle message arrays
+    public void runArrayOperationsMenu() {
         if (currentUser == null) {
-            System.out.println("You must be logged in to access messages.");
+            System.out.println("You must be logged in to access message operations.");
             return;
         }
         
-        System.out.println("Welcome to QuickChat");
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
         
         while (running) {
-            System.out.println("\n===== Message Menu =====");
-            System.out.println("1. Send Messages");
-            System.out.println("2. Show recently sent messages");
-            System.out.println("3. Quit");
+            System.out.println("\n===== Message Array Operations =====");
+            System.out.println("1. Display sender and recipient of all sent messages");
+            System.out.println("2. Display the longest sent message");
+            System.out.println("3. Search for a message by ID");
+            System.out.println("4. Search messages by recipient");
+            System.out.println("5. Delete a message by hash");
+            System.out.println("6. Display full report of sent messages");
+            System.out.println("7. Back to main menu");
             System.out.print("Choose an option: ");
             
             String choice = scanner.nextLine();
             
             switch (choice) {
                 case "1":
-                    sendMessagesFlow(scanner);
+                    displaySendersAndRecipients();
                     break;
                 case "2":
-                    System.out.println("Coming Soon.");
+                    displayLongestMessage();
                     break;
                 case "3":
+                    System.out.print("Enter message ID to search: ");
+                    searchMessageById(scanner.nextLine());
+                    break;
+                case "4":
+                    System.out.print("Enter recipient phone number: ");
+                    searchMessagesByRecipient(scanner.nextLine());
+                    break;
+                case "5":
+                    System.out.print("Enter message hash to delete: ");
+                    deleteMessageByHash(scanner.nextLine());
+                    break;
+                case "6":
+                    displayFullReport();
+                    break;
+                case "7":
                     running = false;
-                    System.out.println("Goodbye!");
                     break;
                 default:
                     System.out.println("Invalid option. Please try again.");
@@ -53,125 +128,87 @@ public class ChatApplication {
         }
     }
     
-    private void sendMessagesFlow(Scanner scanner) {
-        System.out.print("How many messages do you want to send? ");
-        int numMessages;
-        try {
-            numMessages = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException e) {
-            System.out.println("Please enter a valid number.");
+    private void displaySendersAndRecipients() {
+        System.out.println("\n=== Senders and Recipients of Sent Messages ===");
+        for (Message msg : sentMessages) {
+            System.out.println("Sender: " + msg.getSenderPhoneNumber() + 
+                             " | Recipient: " + msg.getRecipientPhoneNumber());
+        }
+    }
+    
+    private void displayLongestMessage() {
+        if (sentMessages.isEmpty()) {
+            System.out.println("No sent messages available.");
             return;
         }
         
-        for (int i = 0; i < numMessages; i++) {
-            System.out.println("\n=== Message " + (i+1) + " ===");
-            System.out.print("Enter recipient phone number: ");
-            String recipientNumber = scanner.nextLine();
-            
-            // Check if recipient exists
-            if (!users.containsKey(recipientNumber)) {
-                System.out.println("Recipient not found. Please try again.");
-                i--; // Retry this message
-                continue;
-            }
-            
-            System.out.print("Enter message: ");
-            String messageText = scanner.nextLine();
-            
-            Message message = new Message(messageText, recipientNumber, 
-                                      currentUser.getCellPhoneNumber());
-            
-            if (!message.checkMessageLength()) {
-                System.out.println("Please enter a message of less than 250 characters.");
-                i--; // Retry this message
-                continue;
-            }
-            
-            if (!message.checkRecipientCell()) {
-                System.out.println("Cell phone number is incorrectly formatted or does not contain an international code.");
-                i--; // Retry this message
-                continue;
-            }
-            
-            System.out.println("\n" + message.printMessageDetails());
-            
-            System.out.println("\nChoose an option:");
-            System.out.println("1. Send Message");
-            System.out.println("2. Disregard Message");
-            System.out.println("3. Store Message to send later");
-            System.out.print("Your choice: ");
-            
-            int sendChoice;
-            try {
-                sendChoice = Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid choice. Message will be disregarded.");
-                sendChoice = 2;
-            }
-            
-            String result = message.sentMessage(sendChoice);
-            System.out.println(result);
-            
-            if (sendChoice == 1) {
-                // Initialize message lists if they don't exist
-                messages.computeIfAbsent(currentUser.getCellPhoneNumber(), k -> new ArrayList<>());
-                messages.computeIfAbsent(recipientNumber, k -> new ArrayList<>());
-                
-                // Add to sender's and recipient's message lists
-                messages.get(currentUser.getCellPhoneNumber()).add(message);
-                messages.get(recipientNumber).add(message);
-                
-                // Show in JOptionPane
-                JOptionPane.showMessageDialog(null, 
-                    "Message Details:\n" + message.printMessageDetails(),
-                    "Message Sent",
-                    JOptionPane.INFORMATION_MESSAGE);
-                
-                // Store in JSON file
-                try (FileWriter file = new FileWriter("messages.json", true)) {
-                    file.write(message.storeMessage().toString() + "\n"1);
-                } catch (IOException e) {
-                    System.out.println("Error storing message: " + e.getMessage());
-                }
+        Message longest = sentMessages.get(0);
+        for (Message msg : sentMessages) {
+            if (msg.getMessagePayload().length() > longest.getMessagePayload().length()) {
+                longest = msg;
             }
         }
         
-        System.out.println("\nTotal messages sent in this session: " + 
-                          Message.returnTotalMessages());
+        System.out.println("\n=== Longest Sent Message ===");
+        System.out.println("Message: " + longest.getMessagePayload());
+        System.out.println("Length: " + longest.getMessagePayload().length() + " characters");
     }
     
-    // Add your registerUser and login methods here
-    public boolean registerUser(String username, String password, String firstName, 
-                              String lastName, String cellPhoneNumber) {
-        Login newUser = new Login(username, password, firstName, lastName, cellPhoneNumber);
-        String registrationStatus = newUser.registerUser();
-        if (registrationStatus.equals("Registration successful!")) {
-            users.put(cellPhoneNumber, newUser);
-            messages.put(cellPhoneNumber, new ArrayList<>());
-            return true;
-        }
-        System.out.println(registrationStatus);
-        return false;
-    }
-    
-    public boolean login(String username, String password) {
-        for (Login user : users.values()) {
-            if (user.getUsername().equals(username)) {
-                boolean loginSuccess = user.loginUser(username, password);
-                if (loginSuccess) {
-                    currentUser = user;
-                    System.out.println(user.returnLoginStatus());
-                    return true;
-                } else {
-                    System.out.println("Username or password incorrect, please try again.");
-                    return false;
-                }
+    private void searchMessageById(String messageId) {
+        for (Message msg : sentMessages) {
+            if (msg.getMessageId().equals(messageId)) {
+                System.out.println("\n=== Message Found ===");
+                System.out.println("Recipient: " + msg.getRecipientPhoneNumber());
+                System.out.println("Message: " + msg.getMessagePayload());
+                return;
             }
         }
-        System.out.println("User not found. Please register first.");
-        return false;
+        System.out.println("Message with ID " + messageId + " not found.");
     }
     
+    private void searchMessagesByRecipient(String recipient) {
+        List<Message> recipientMessages = new ArrayList<>();
+        recipientMessages.addAll(sentMessages.stream()
+            .filter(msg -> msg.getRecipientPhoneNumber().equals(recipient))
+            .collect(Collectors.toList()));
+        recipientMessages.addAll(storedMessages.stream()
+            .filter(msg -> msg.getRecipientPhoneNumber().equals(recipient))
+            .collect(Collectors.toList()));
+        
+        if (recipientMessages.isEmpty()) {
+            System.out.println("No messages found for recipient " + recipient);
+            return;
+        }
+        
+        System.out.println("\n=== Messages for Recipient: " + recipient + " ===");
+        for (Message msg : recipientMessages) {
+            System.out.println("Message: " + msg.getMessagePayload());
+        }
+    }
+    
+    private void deleteMessageByHash(String hash) {
+        for (Message msg : sentMessages) {
+            if (msg.createMessageHash().equals(hash)) {
+                sentMessages.remove(msg);
+                System.out.println("Message \"" + msg.getMessagePayload() + "\" successfully deleted.");
+                return;
+            }
+        }
+        System.out.println("Message with hash " + hash + " not found.");
+    }
+    
+    private void displayFullReport() {
+        System.out.println("\n=== Full Report of Sent Messages ===");
+        for (Message msg : sentMessages) {
+            System.out.println("Message Hash: " + msg.createMessageHash());
+            System.out.println("Recipient: " + msg.getRecipientPhoneNumber());
+            System.out.println("Message: " + msg.getMessagePayload());
+            System.out.println("Timestamp: " + msg.getTimestamp());
+            System.out.println("----------------------------------");
+        }
+    }
+    
+    // Update the main menu to include the new option
     public static void main(String[] args) {
         ChatApplication app = new ChatApplication();
         Scanner scanner = new Scanner(System.in);
@@ -182,36 +219,26 @@ public class ChatApplication {
             System.out.println("1. Register");
             System.out.println("2. Login");
             System.out.println("3. Access Messages");
-            System.out.println("4. Exit");
+            System.out.println("4. Message Array Operations");
+            System.out.println("5. Exit");
             System.out.print("Choose an option: ");
             
             String choice = scanner.nextLine();
             
             switch (choice) {
                 case "1":
-                    System.out.print("Enter username (must contain underscore and max 5 chars): ");
-                    String username = scanner.nextLine();
-                    System.out.print("Enter password (min 8 chars, uppercase, number, special char): ");
-                    String password = scanner.nextLine();
-                    System.out.print("Enter first name: ");
-                    String firstName = scanner.nextLine();
-                    System.out.print("Enter last name: ");
-                    String lastName = scanner.nextLine();
-                    System.out.print("Enter cell phone number (format: +27XXXXXXXXX): ");
-                    String cellPhoneNumber = scanner.nextLine();
-                    app.registerUser(username, password, firstName, lastName, cellPhoneNumber);
+                    // ... existing registration code ...
                     break;
                 case "2":
-                    System.out.print("Enter username: ");
-                    String loginUsername = scanner.nextLine();
-                    System.out.print("Enter password: ");
-                    String loginPassword = scanner.nextLine();
-                    app.login(loginUsername, loginPassword);
+                    // ... existing login code ...
                     break;
                 case "3":
                     app.runMessageMenu();
                     break;
                 case "4":
+                    app.runArrayOperationsMenu();
+                    break;
+                case "5":
                     running = false;
                     System.out.println("Goodbye!");
                     break;
@@ -221,4 +248,6 @@ public class ChatApplication {
         }
         scanner.close();
     }
+    
+    // ... rest of the existing code ...
 }
