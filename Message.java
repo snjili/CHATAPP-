@@ -1,8 +1,8 @@
+// Update Message.java
 import java.util.Random;
-
+import org.json.JSONObject; // Add this import
 
 public class Message {
-    // ... existing fields ...
     private final String messageId;
     private static int messageCounter = 0;
     private static int totalMessagesSent = 0;
@@ -11,8 +11,8 @@ public class Message {
     private final String messagePayload;
     private final String timestamp;
     private boolean messageSent;
-    private final boolean messageReceived;
-    private final boolean messageRead;
+    private boolean messageReceived;
+    private boolean messageRead;
     
     public Message(String messagePayload, String recipientPhoneNumber, String senderPhoneNumber) {
         this.messagePayload = messagePayload;
@@ -51,23 +51,16 @@ public class Message {
     
     public String sentMessage(int choice) {
         switch (choice) {
-            case 1 -> {
-                // Send
+            case 1:
                 this.messageSent = true;
                 totalMessagesSent++;
                 return "Message successfully sent.";
-            }
-            case 2 -> {
-                // Disregard
+            case 2:
                 return "Press 0 to delete message.";
-            }
-            case 3 -> {
-                // Store
+            case 3:
                 return "Message successfully stored.";
-            }
-            default -> {
+            default:
                 return "Invalid choice.";
-            }
         }
     }
     
@@ -94,15 +87,13 @@ public class Message {
         return json;
     }
     
-    // ... existing methods ...
-
-    private static class JSONObject {
-
-        public JSONObject() {
-        }
-
-        private void put(String messageId, String messageId0) {
-            throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-        }
-    }
+    // Getters
+    public String getMessageId() { return messageId; }
+    public String getRecipientPhoneNumber() { return recipientPhoneNumber; }
+    public String getSenderPhoneNumber() { return senderPhoneNumber; }
+    public String getMessagePayload() { return messagePayload; }
+    public String getTimestamp() { return timestamp; }
+    public boolean isMessageSent() { return messageSent; }
+    public boolean isMessageReceived() { return messageReceived; }
+    public boolean isMessageRead() { return messageRead; }
 }
